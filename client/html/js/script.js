@@ -169,7 +169,7 @@ $.getJSON('games.json', function (data) {
 
           if (outcome === color) {
             $('#status')[0].innerHTML = `<b>Status:</b> <span class="win">Du vandt!</span>`;
-            $.post('http://casino/coinGiveWin', JSON.stringify({amount: input * 2}));
+            $.post('http://casino/coinGiveWin', JSON.stringify({amount: input * games.coinflip.multiplier}));
           } else {
             $('#status')[0].innerHTML = `<b>Status:</b> <span class="loose">Du tabte.</span>`;
           }
