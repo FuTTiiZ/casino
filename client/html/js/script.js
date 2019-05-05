@@ -152,10 +152,10 @@ $.getJSON('games.json', function (data) {
       function flipCoin() {
         freeze = true;
         $('#status')[0].innerHTML = `<b>Status:</b> Mønten flipper...`;
-        let flipResult = Math.random();
+        let flipResult = Math.floor(Math.random() * 2);
         $('#coin').removeClass();
         setTimeout(function() {
-          if (flipResult <= 0.5) {
+          if (flipResult === 0) {
             $('#coin').addClass('green');
             outcome = 'green';
           } else {
@@ -258,5 +258,5 @@ $.getJSON('games.json', function (data) {
     }
   }});
 
-  
+
 });
