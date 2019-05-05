@@ -1,6 +1,6 @@
 {
   "coinflip": {
-    "multiplier": 2,
+    "multiplier": 1.5,
     "amounts": [
       500,
       1000,
