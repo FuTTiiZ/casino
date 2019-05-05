@@ -63,7 +63,7 @@ $.getJSON('games.json', function (data) {
     </li>
     <div class="shadow"></div>
     <li class="gm-info">
-      <b>Hvordan virker spillet?</b><br>Simpelt, bare klik på mønten, og så er det 50:50 om du <span class="win">vinder</span> eller <span class="loose">taber</span>.<br>Vinder du, får du <span class="multiplier">${games.coinflip.multiplier}x</span> dine penge tilbage.
+      <b>Hvordan virker spillet?</b><br>Simpelt, bare klik på mønten, og så er det 50:50 om du <span class="win">vinder</span> eller <span class="loose">taber</span>.<br>Vinder du, får du <span class="multiplier">${games.coinflip.multiplier.toString().replace('.', ',')}x</span> dine penge tilbage.
     </li>
     <li class="noselect coin-container">
       <div id="coin">
