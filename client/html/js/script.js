@@ -6,7 +6,7 @@ $.getJSON('games.json', function (data) {
     let freeze = false;
 
   // Laver en funktion til at lukke menuen
-  function closeCatalog() {
+  function closeMenu() {
     if (!freeze) {
       setActive($('#' + tab), false);
       setTab(welcome);
@@ -40,6 +40,14 @@ $.getJSON('games.json', function (data) {
 
   function setTab(page) {
     $('#containerList')[0].innerHTML = page;
+  }
+
+  function remove(array, element) {
+    const index = array.indexOf(element);
+
+    if (index > -1) {
+      array.splice(index, 1);
+    }
   }
 
   // Laver de forskellige tabs
@@ -81,6 +89,11 @@ $.getJSON('games.json', function (data) {
         <p id="winMoney"><b>Mulig gevinst:</b></p>
       </div>
     </li>
+    <li>
+      <div class="gm-info">
+        <p id="status"><b>Status:</b> Intet valgt.</p>
+      </div>
+    </li>
   `;
 
   // Laver tab variablet
@@ -90,31 +103,45 @@ $.getJSON('games.json', function (data) {
   $(document).ready(function() {
     window.addEventListener('message', function(event) {
       const data = event.data;
-      if (data.display === 'casino') {
-        $('.window').show();
-      } else {
-        $('.window').hide();
+      if (data.type === 'casino') {
+        if (data.display === true) {
+          $('.window').show();
+        } else if (data.display === false) {
+          $('.window').hide();
+        }
       }
     });
   });
   // Luk menuen med "ESC" knappen på tasteturet
   $(document).keyup(function (data) {
       if (data.which == 27) {
-        closeCatalog();
+        closeMenu();
       }
   });
 
   // Luk menuen med "x" oppe in højre hjørne
   $('.x-container').bind('click', function() {
-    closeCatalog();
+    closeMenu();
   });
 
+  // Coinflip
   $('#coinflip').bind('click', function() { if (!freeze) {
     if (tab != 'coinflip') {
       tab = 'coinflip';
       setActive($('#coinflip'), true);
       setTab(coinflip);
 
+      window.addEventListener('message', function(event) {
+        const data = event.data;
+        if (data.event === 'flipCoin') {
+          flipCoin();
+        } else if (data.event === 'coinNotEnough') {
+          $('#status')[0].innerHTML = `<b>Status:</b> <span class="loose">Du har ikke nok kontanter på dig.</span>`;
+          coinFlip = true;
+        }
+      });
+
+      let status = [];
       let coinFlip;
       let input;
       let outcome;
@@ -122,25 +149,49 @@ $.getJSON('games.json', function (data) {
       let color;
       let profit;
 
+      function flipCoin() {
+        freeze = true;
+        $('#status')[0].innerHTML = `<b>Status:</b> Mønten flipper...`;
+        let flipResult = Math.random();
+        $('#coin').removeClass();
+        setTimeout(function() {
+          if (flipResult <= 0.5) {
+            $('#coin').addClass('green');
+            outcome = 'green';
+          } else {
+            $('#coin').addClass('red');
+            outcome = 'red';
+          }
+        }, 100);
+        setTimeout(function() {
+          coinFlip = true;
+          freeze = false;
+
+          if (outcome === color) {
+            $('#status')[0].innerHTML = `<b>Status:</b> <span class="win">Du vandt!</span>`;
+            $.post('http://casino/coinGiveWin', JSON.stringify({amount: input * 2}));
+          } else {
+            $('#status')[0].innerHTML = `<b>Status:</b> <span class="loose">Du tabte.</span>`;
+          }
+        }, 3000);
+      }
+
+      function updateStatus() {
+        if (status.length == 2) {
+          $('#status')[0].innerHTML = `<b>Status:</b> Farve og sats valgt.`;
+        } else if (status.length == 1 && status[0] === 'color') {
+          $('#status')[0].innerHTML = `<b>Status:</b> Farve valgt.`;
+        } else if (status.length == 1 && status[0] === 'amount') {
+          $('#status')[0].innerHTML = `<b>Status:</b> Sats valgt.`;
+        } else {
+          $('#status')[0].innerHTML = `<b>Status:</b> Intet valgt.`;
+        }
+      }
+
       $('#coin').bind('click', function() {
         if (coinFlip && color) {
+          $.post('http://casino/startFlip', JSON.stringify({amount: input}));
           coinFlip = false;
-          freeze = true;
-          let flipResult = Math.random();
-          $('#coin').removeClass();
-          setTimeout(function() {
-            if (flipResult <= 0.5) {
-              $('#coin').addClass('green');
-              outcome = 'green';
-            } else {
-              $('#coin').addClass('red');
-              outcome = 'red';
-            }
-          }, 100);
-          setTimeout(function() {
-            coinFlip = true;
-            freeze = false;
-          }, 3000);
         }
       });
 
@@ -149,40 +200,54 @@ $.getJSON('games.json', function (data) {
           setActive($(this), true);
           chosen = $(this).index();
           coinFlip = true;
+          status.push('amount');
           input = games.coinflip.amounts[chosen];
           $('#input')[0].innerHTML = `<b>Sats:</b> <span class="price">${formatPrice(input)}</span>`;
           $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b> <span class="price">${formatPrice(input * games.coinflip.multiplier)}</span>`;
+          updateStatus();
         } else if ($(this).index() === chosen) {
           setActive($(this), false);
+          remove(status, 'amount');
           chosen = false;
           coinFlip = false;
           $('#input')[0].innerHTML = `<b>Sats:</b>`;
           $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b>`;
+          updateStatus();
         } else {
           setActive($($('#inputOptions').children()[chosen]), false);
           setActive($(this), true);
           chosen = $(this).index();
+          remove(status, 'amount');
+          status.push('amount');
           coinFlip = true;
           input = games.coinflip.amounts[chosen];
           $('#input')[0].innerHTML = `<b>Sats:</b> <span class="price">${formatPrice(input)}</span>`;
           $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b> <span class="price">${formatPrice(input * games.coinflip.multiplier)}</span>`;
+          updateStatus();
         }
       }});
 
       $('.color-options').on('click', 'div', function() { if (!freeze) {
         if (!color) {
-          setActive($(this), true);
           color = $(this).attr('id');
+          setActive($(this), true);
+          status.push('color');
           $('#color')[0].innerHTML = `<b>Farve:</b> <img class="text-icon" src="${colorImg(color)}">`;
+          updateStatus();
         } else if (color === $(this).attr('id')) {
           setActive($(this), false);
           color = false;
           $('#color')[0].innerHTML = `<b>Farve:</b>`;
+          remove(status, 'color');
+          updateStatus();
         } else {
-          setActive($('#' + color), false);
-          setActive($(this), true);
           color = $(this).attr('id');
+          setActive($('#' + (color === 'green' ? 'red' : 'green')), false);
+          setActive($(this), true);
+          remove(status, 'color');
+          status.push('color');
           $('#color')[0].innerHTML = `<b>Farve:</b> <img class="text-icon" src="${colorImg(color)}">`;
+          updateStatus();
         }
       }});
 
@@ -192,4 +257,6 @@ $.getJSON('games.json', function (data) {
       setTab(welcome);
     }
   }});
+
+  
 });
