@@ -1,6 +1,7 @@
 {
   "coinflip": {
     "multiplier": 1.5,
+    "multiplierBlack": 1,
     "amounts": [
       500,
       1000,

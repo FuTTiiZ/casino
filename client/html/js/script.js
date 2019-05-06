@@ -33,8 +33,10 @@ $.getJSON('games.json', function (data) {
       e.attr('class', cur += ' clicked');
     } else if (!on) {
       let cur = e.attr('class');
-      let newC = cur.replace('clicked', '');
-      e.attr('class', newC);
+      if (cur) {
+        let newC = cur.replace('clicked', '');
+        e.attr('class', newC);
+      }
     }
   }
 
@@ -53,6 +55,7 @@ $.getJSON('games.json', function (data) {
   // Laver de forskellige tabs
   const welcome = $('#containerList')[0].innerHTML;
 
+  let coinflipM = games.coinflip.multiplier;
   const coinflip = `
     <li class="menu-header">
       <div>
@@ -62,8 +65,8 @@ $.getJSON('games.json', function (data) {
       </div>
     </li>
     <div class="shadow"></div>
-    <li class="gm-info">
-      <b>Hvordan virker spillet?</b><br>Simpelt, bare klik på mønten, og så er det 50:50 om du <span class="win">vinder</span> eller <span class="loose">taber</span>.<br>Vinder du, får du <span class="multiplier">${games.coinflip.multiplier.toString().replace('.', ',')}x</span> dine penge tilbage.
+    <li id="info" class="gm-info">
+      <b>Hvordan virker spillet?</b><br>Simpelt, bare klik på mønten, og så er det 50:50 om du <span class="win">vinder</span> eller <span class="loose">taber</span>.<br>Vinder du, får du <span class="multiplier">${coinflipM.toString().replace('.', ',')}x</span> dine penge tilbage.
     </li>
     <li class="noselect coin-container">
       <div id="coin">
@@ -87,6 +90,16 @@ $.getJSON('games.json', function (data) {
         <p id="input"><b>Sats:</b></p>
         <p id="color"><b>Farve:</b></p>
         <p id="winMoney"><b>Mulig gevinst:</b></p>
+      </div>
+    </li>
+    <li>
+      <div class="gm-info">
+        <p><b>Brug sorte penge:</b>
+        <label class="check-container">
+          <input type="checkbox">
+          <span class="checkmark"></span>
+        </label>
+        </p>
       </div>
     </li>
     <li>
@@ -136,18 +149,23 @@ $.getJSON('games.json', function (data) {
         if (data.event === 'flipCoin') {
           flipCoin();
         } else if (data.event === 'coinNotEnough') {
-          $('#status')[0].innerHTML = `<b>Status:</b> <span class="loose">Du har ikke nok kontanter på dig.</span>`;
           coinFlip = true;
+          if (!type) {
+            $('#status')[0].innerHTML = `<b>Status:</b> <span class="loose">Du har ikke nok kontanter på dig.</span>`;
+          } else {
+            $('#status')[0].innerHTML = `<b>Status:</b> <span class="loose">Du har ikke nok sorte penge på dig.</span>`;
+          }
         }
       });
 
       let status = [];
-      let coinFlip;
+      let coinFlip = false;
       let input;
       let outcome;
       let chosen = false;
       let color;
       let profit;
+      let type = false;
 
       function flipCoin() {
         freeze = true;
@@ -169,7 +187,7 @@ $.getJSON('games.json', function (data) {
 
           if (outcome === color) {
             $('#status')[0].innerHTML = `<b>Status:</b> <span class="win">Du vandt!</span>`;
-            $.post('http://casino/coinGiveWin', JSON.stringify({amount: input * games.coinflip.multiplier}));
+            $.post('http://casino/coinGiveWin', JSON.stringify({amount: input * coinflipM}));
           } else {
             $('#status')[0].innerHTML = `<b>Status:</b> <span class="loose">Du tabte.</span>`;
           }
@@ -178,11 +196,11 @@ $.getJSON('games.json', function (data) {
 
       function updateStatus() {
         if (status.length == 2) {
-          $('#status')[0].innerHTML = `<b>Status:</b> Farve og sats valgt.`;
+          $('#status')[0].innerHTML = `<b>Status:</b> <span style="color: ${color}">Farve</span> og sats (<span class="price">${formatPrice(input)}</span>) valgt.`;
         } else if (status.length == 1 && status[0] === 'color') {
-          $('#status')[0].innerHTML = `<b>Status:</b> Farve valgt.`;
+          $('#status')[0].innerHTML = `<b>Status:</b> <span style="color: ${color}">Farve</span> valgt.`;
         } else if (status.length == 1 && status[0] === 'amount') {
-          $('#status')[0].innerHTML = `<b>Status:</b> Sats valgt.`;
+          $('#status')[0].innerHTML = `<b>Status:</b> Sats (<span class="price">${formatPrice(input)}</span>) valgt.`;
         } else {
           $('#status')[0].innerHTML = `<b>Status:</b> Intet valgt.`;
         }
@@ -190,8 +208,14 @@ $.getJSON('games.json', function (data) {
 
       $('#coin').bind('click', function() {
         if (coinFlip && color) {
-          $.post('http://casino/startFlip', JSON.stringify({amount: input}));
+          $.post('http://casino/startFlip', JSON.stringify({amount: input, type: type}));
           coinFlip = false;
+        } else if (!coinFlip && !color) {
+          $('#status')[0].innerHTML = `<b>Status:</b> Du mangler at angive hvor meget du satser og hvor meget du vil satse.`;
+        } else if (!coinFlip) {
+          $('#status')[0].innerHTML = `<b>Status:</b> Du mangler at angive hvor meget du vil satse.`;
+        } else if (!color) {
+          $('#status')[0].innerHTML = `<b>Status:</b> Du mangler at angive hvilken farve du satser på.`;
         }
       });
 
@@ -203,7 +227,7 @@ $.getJSON('games.json', function (data) {
           status.push('amount');
           input = games.coinflip.amounts[chosen];
           $('#input')[0].innerHTML = `<b>Sats:</b> <span class="price">${formatPrice(input)}</span>`;
-          $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b> <span class="price">${formatPrice(input * games.coinflip.multiplier)}</span>`;
+          $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b> <span class="price">${formatPrice(input * coinflipM)}</span>`;
           updateStatus();
         } else if ($(this).index() === chosen) {
           setActive($(this), false);
@@ -222,7 +246,7 @@ $.getJSON('games.json', function (data) {
           coinFlip = true;
           input = games.coinflip.amounts[chosen];
           $('#input')[0].innerHTML = `<b>Sats:</b> <span class="price">${formatPrice(input)}</span>`;
-          $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b> <span class="price">${formatPrice(input * games.coinflip.multiplier)}</span>`;
+          $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b> <span class="price">${formatPrice(input * coinflipM)}</span>`;
           updateStatus();
         }
       }});
@@ -250,6 +274,22 @@ $.getJSON('games.json', function (data) {
           updateStatus();
         }
       }});
+
+      $('.checkmark').bind('click', function() {
+        if (!type) {
+          coinflipM = games.coinflip.multiplierBlack;
+          type = true;
+          $('#status')[0].innerHTML = `<b>Status:</b> Du bruger nu <span style="font-weight: bold; color: black">sorte</span> penge.`;
+        } else {
+          coinflipM = games.coinflip.multiplier;
+          type = false;
+          $('#status')[0].innerHTML = `<b>Status:</b> Du bruger nu <span class="win">kontanter</span>.`;
+        }
+        if (coinFlip) {
+          $('#winMoney')[0].innerHTML = `<b>Mulig gevinst:</b> <span class="price">${formatPrice(input * coinflipM)}</span>`;
+        }
+        $('.multiplier')[0].innerHTML = `${coinflipM.toString().replace('.', ',')}x`;
+      });
 
     } else if (tab === 'coinflip') {
       setActive($('#coinflip'), false);

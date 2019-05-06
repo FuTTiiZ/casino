@@ -34,7 +34,7 @@ Citizen.CreateThread(function()
       print('casino: ' .. ply.identifier .. ' laver et eller ander mærkeligt i kasinoen!')
       return
     end
-    TriggerServerEvent('casino:startFlip', amount)
+    TriggerServerEvent('casino:startFlip', amount, data.type)
   end)
 
   RegisterNUICallback('coinGiveWin', function(data, cb)
