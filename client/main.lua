@@ -71,6 +71,9 @@ Citizen.CreateThread(function()
         promptClose = true
       end
     end
-    DrawMarker(1, Config.location.x, Config.location.y, Config.location.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.5, 1.5, 1.0, 0, 255, 0, 90, 0, 0, 2, 0, 0, 0, 0)
+
+    if plyDist <= 100.0 then
+      DrawMarker(1, Config.location.x, Config.location.y, Config.location.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.5, 1.5, 1.0, 0, 255, 0, 90, 0, 0, 2, 0, 0, 0, 0)
+    end
   end
 end)
